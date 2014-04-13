@@ -2,7 +2,7 @@ package zforwarder_test
 
 import (
 	zmq "github.com/pebbe/zmq4"
-	zforwarder "github.com/sublee/zforwarder"
+	"github.com/sublee/zforwarder"
 	"testing"
 	"time"
 )
