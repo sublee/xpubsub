@@ -1,4 +1,4 @@
-xpubsub
-=======
+zforwarder
+==========
 
-A XPUB/XSUB broker
+A ØMQ Forwarder implementation in Go
