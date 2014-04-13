@@ -1,10 +1,10 @@
 package zforwarder_test
 
 import (
-	"time"
 	zmq "github.com/pebbe/zmq4"
 	zforwarder "github.com/sublee/zforwarder"
 	"testing"
+	"time"
 )
 
 func TestProxy(t *testing.T) {
