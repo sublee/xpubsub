@@ -1,8 +1,7 @@
-package zforwarder_test
+package main
 
 import (
 	zmq "github.com/pebbe/zmq4"
-	"github.com/sublee/zforwarder"
 	"testing"
 	"time"
 )
@@ -18,7 +17,7 @@ func TestProxy(t *testing.T) {
 	pub.Connect("inproc://xsub")
 	sub.Connect("inproc://xpub")
 	// run forwarder
-	go zforwarder.Forwarder(xpub, xsub)
+	go Forwarder(xpub, xsub)
 	// communicate between PUB/SUB via XPUB/XSUB
 	sub.SetSubscribe("")
 	time.Sleep(time.Nanosecond)
