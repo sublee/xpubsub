@@ -8,7 +8,7 @@ import (
 )
 
 var device = goopt.Alternatives(
-	[]string{"--device"}, []string{"queue", "forwarder", "streamer"},
+	[]string{"-d", "--device"}, []string{"queue", "forwarder", "streamer"},
 	"device type to run.")
 var frontendPort = goopt.Int(
 	[]string{"-f", "--frontend"}, 5561,
@@ -17,37 +17,22 @@ var backendPort = goopt.Int(
 	[]string{"-b", "--backend"}, 5562,
 	"listening port the backend socket binds to.")
 
-func queue() (*zmq.Socket, *zmq.Socket) {
-	frontend, _ := zmq.NewSocket(zmq.ROUTER)
-	backend, _ := zmq.NewSocket(zmq.DEALER)
-	return frontend, backend
-}
-
-func forwarder() (*zmq.Socket, *zmq.Socket) {
-	frontend, _ := zmq.NewSocket(zmq.XSUB)
-	backend, _ := zmq.NewSocket(zmq.XPUB)
-	return frontend, backend
-}
-
-func streamer() (*zmq.Socket, *zmq.Socket) {
-	frontend, _ := zmq.NewSocket(zmq.PULL)
-	backend, _ := zmq.NewSocket(zmq.PUSH)
-	return frontend, backend
-}
-
 func main() {
+	// parse argv
 	goopt.Summary = "Runs ZeroMQ proxy."
 	goopt.Parse(nil)
 	// init sockets by device
-	devices := map[string]func() (*zmq.Socket, *zmq.Socket){
-		"queue":     queue,
-		"forwarder": forwarder,
-		"streamer":  streamer,
+	devices := map[string][]zmq.Type{
+		"queue": []zmq.Type{zmq.ROUTER, zmq.DEALER},
+		"forwarder": []zmq.Type{zmq.XSUB, zmq.XPUB},
+		"streamer": []zmq.Type{zmq.PULL, zmq.PUSH},
 	}
-	frontend, backend := devices[*device]()
+	types := devices[*device]
+	frontend, _ := zmq.NewSocket(types[0])
 	defer frontend.Close()
+	backend, _ := zmq.NewSocket(types[1])
 	defer backend.Close()
-	log.Printf("Device '%s' selected", *device)
+	log.Printf("ZeroMQ device '%s' selected", *device)
 	// bind to the ports
 	frontend.Bind(fmt.Sprintf("tcp://*:%d", *frontendPort))
 	backend.Bind(fmt.Sprintf("tcp://*:%d", *backendPort))
