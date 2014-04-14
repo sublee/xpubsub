@@ -2,54 +2,60 @@ package main
 
 import (
 	"fmt"
-	"github.com/docopt/docopt.go"
+	"github.com/droundy/goopt"
 	zmq "github.com/pebbe/zmq4"
 	"log"
-	"strconv"
 )
 
-var (
-	frontend         *zmq.Socket
-	backend          *zmq.Socket
-	frontendTypeName string
-	backendTypeName  string
-)
+var device = goopt.Alternatives(
+	[]string{"--device"}, []string{"queue", "forwarder", "streamer"},
+	"device type to run.")
+var frontendPort = goopt.Int(
+	[]string{"-f", "--frontend"}, 5561,
+	"listening port the frontend socket binds to.")
+var backendPort = goopt.Int(
+	[]string{"-b", "--backend"}, 5562,
+	"listening port the backend socket binds to.")
+
+func queue() (*zmq.Socket, *zmq.Socket) {
+	frontend, _ := zmq.NewSocket(zmq.ROUTER)
+	backend, _ := zmq.NewSocket(zmq.DEALER)
+	return frontend, backend
+}
+
+func forwarder() (*zmq.Socket, *zmq.Socket) {
+	frontend, _ := zmq.NewSocket(zmq.XSUB)
+	backend, _ := zmq.NewSocket(zmq.XPUB)
+	return frontend, backend
+}
+
+func streamer() (*zmq.Socket, *zmq.Socket) {
+	frontend, _ := zmq.NewSocket(zmq.PULL)
+	backend, _ := zmq.NewSocket(zmq.PUSH)
+	return frontend, backend
+}
 
 func main() {
-	usage := `Runs ZeroMQ proxy.
-
-  Usage: zmqproxy (queue|forwarder|streamer) [options]
-
-  Options:
-    -f, --frontend PORT    Port the frontend socket binds to. [default: 5561]
-    -b, --backend PORT     Port the backend socket binds to. [default: 5562]`
-	args, _ := docopt.Parse(usage, nil, true, "", false)
-	// set device
-	if args["queue"].(bool) {
-		frontend, _ = zmq.NewSocket(zmq.ROUTER)
-		backend, _ = zmq.NewSocket(zmq.DEALER)
-		frontendTypeName = "ROUTER"
-		backendTypeName = "DEALER"
-	} else if args["forwarder"].(bool) {
-		frontend, _ = zmq.NewSocket(zmq.XSUB)
-		backend, _ = zmq.NewSocket(zmq.XPUB)
-		frontendTypeName = "XSUB"
-		backendTypeName = "XPUB"
-	} else if args["streamer"].(bool) {
-		frontend, _ = zmq.NewSocket(zmq.PULL)
-		backend, _ = zmq.NewSocket(zmq.PUSH)
-		frontendTypeName = "PULL"
-		backendTypeName = "PUSH"
+	goopt.Summary = "Runs ZeroMQ proxy."
+	goopt.Parse(nil)
+	// init sockets by device
+	devices := map[string]func() (*zmq.Socket, *zmq.Socket){
+		"queue":     queue,
+		"forwarder": forwarder,
+		"streamer":  streamer,
 	}
+	frontend, backend := devices[*device]()
+	defer frontend.Close()
+	defer backend.Close()
+	log.Printf("Device '%s' selected", *device)
 	// bind to the ports
-	frontendPort, _ := strconv.ParseInt(args["--frontend"].(string), 10, 16)
-	backendPort, _ := strconv.ParseInt(args["--backend"].(string), 10, 16)
-	frontend.Bind(fmt.Sprintf("tcp://*:%d", frontendPort))
-	backend.Bind(fmt.Sprintf("tcp://*:%d", backendPort))
+	frontend.Bind(fmt.Sprintf("tcp://*:%d", *frontendPort))
+	backend.Bind(fmt.Sprintf("tcp://*:%d", *backendPort))
 	// run proxy
-	log.Printf(
-		"Running ZeroMQ proxy from %d[%s] to %d[%s]...",
-		frontendPort, frontendTypeName, backendPort, backendTypeName)
+	frontendType, _ := frontend.GetType()
+	backendType, _ := backend.GetType()
+	log.Printf("Proxying between %d[%s] and %d[%s]...",
+		*frontendPort, frontendType, *backendPort, backendType)
 	err := zmq.Proxy(frontend, backend, nil)
 	if err != nil {
 		log.Fatal(err)
