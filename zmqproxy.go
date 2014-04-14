@@ -23,9 +23,9 @@ func main() {
 	goopt.Parse(nil)
 	// init sockets by device
 	devices := map[string][]zmq.Type{
-		"queue": []zmq.Type{zmq.ROUTER, zmq.DEALER},
+		"queue":     []zmq.Type{zmq.ROUTER, zmq.DEALER},
 		"forwarder": []zmq.Type{zmq.XSUB, zmq.XPUB},
-		"streamer": []zmq.Type{zmq.PULL, zmq.PUSH},
+		"streamer":  []zmq.Type{zmq.PULL, zmq.PUSH},
 	}
 	types := devices[*device]
 	frontend, _ := zmq.NewSocket(types[0])
