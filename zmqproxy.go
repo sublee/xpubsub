@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	frontend *zmq.Socket
-	backend *zmq.Socket
+	frontend         *zmq.Socket
+	backend          *zmq.Socket
 	frontendTypeName string
-	backendTypeName string
+	backendTypeName  string
 )
 
 func main() {
